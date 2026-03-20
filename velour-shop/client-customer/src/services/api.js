@@ -1,0 +1,91 @@
+import axios from "axios";
+
+const api = axios.create({ baseURL: "/api" });
+
+// Tự động gắn token
+api.interceptors.request.use((config) => {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  if (user.token) config.headers.Authorization = `Bearer ${user.token}`;
+  return config;
+});
+
+export const authAPI = {
+  login: (data) => api.post("/auth/login", data),
+  register: (data) => api.post("/auth/register", data),
+  logout: () => api.post("/auth/logout"),
+  refresh: (data) => api.post("/auth/refresh", data),
+  forgotPassword: (data) => api.post("/auth/forgot-password", data),
+  resetPassword: (data) => api.post("/auth/reset-password", data),
+  verifyEmail: (data) => api.post("/auth/verify-email", data),
+  oauth: (data) => api.post("/auth/oauth", data),
+  googleLogin: (data) =>
+    api.post("/auth/oauth", { provider: "google", ...data }),
+  facebookLogin: (data) =>
+    api.post("/auth/oauth", { provider: "facebook", ...data }),
+  googleTokenLogin: (idToken) =>
+    api.post("/auth/oauth/google/token", { id_token: idToken }),
+  facebookTokenLogin: (accessToken) =>
+    api.post("/auth/oauth/facebook/token", { access_token: accessToken }),
+  firebaseLogin: (idToken) => api.post("/auth/oauth/firebase", { idToken }),
+};
+
+export const productAPI = {
+  getAll: (params) => api.get("/products", { params }),
+  suggest: (q) => api.get("/products/search/suggest", { params: { q } }),
+  getById: (id) => api.get(`/products/${id}`),
+  getRelated: (id) => api.get(`/products/${id}/related`),
+  review: (id, data) => api.post(`/products/${id}/reviews`, data),
+  create: (data) => api.post("/products", data),
+  update: (id, data) => api.put(`/products/${id}`, data),
+  remove: (id) => api.delete(`/products/${id}`),
+};
+
+export const orderAPI = {
+  create: (data) => api.post("/orders", data),
+  myOrders: () => api.get("/orders/myorders"),
+  getById: (id) => api.get(`/orders/${id}`),
+  createMomoPayment: (data) => api.post("/orders/payment/momo/create", data),
+  createStripeCheckoutSession: (data) =>
+    api.post("/orders/payment/stripe/checkout-session", data),
+  createPaypalOrder: (data) =>
+    api.post("/orders/payment/paypal/create-order", data),
+  capturePaypalOrder: (data) =>
+    api.post("/orders/payment/paypal/capture", data),
+};
+
+export const couponAPI = {
+  validate: (data) => api.post("/coupons/validate", data),
+};
+
+export const userAPI = {
+  getProfile: () => api.get("/users/profile"),
+  updateProfile: (data) => api.put("/users/profile", data),
+  getWishlist: () => api.get("/users/wishlist"),
+  addToWishlist: (productId) => api.post(`/users/wishlist/${productId}`),
+  removeFromWishlist: (productId) => api.delete(`/users/wishlist/${productId}`),
+  getCart: () => api.get("/users/cart"),
+  syncCart: (cart) => api.put("/users/cart", { cart }),
+  addAddress: (data) => api.post("/users/addresses", data),
+  updateAddress: (addressId, data) =>
+    api.put(`/users/addresses/${addressId}`, data),
+  deleteAddress: (addressId) => api.delete(`/users/addresses/${addressId}`),
+  listUsers: () => api.get("/users"),
+  updateUserRole: (id, role) => api.patch(`/users/${id}/role`, { role }),
+  updateUserStatus: (id, status) =>
+    api.patch(`/users/${id}/status`, { status }),
+};
+
+export const adminAPI = {
+  dashboard: (range = "month") =>
+    api.get("/admin/dashboard", { params: { range } }),
+  orders: () => api.get("/admin/orders"),
+  updateOrderStatus: (id, status) =>
+    api.patch(`/admin/orders/${id}/status`, { status }),
+  inventory: () => api.get("/admin/inventory"),
+};
+
+export const seoAPI = {
+  getSettings: () => api.get("/seo/settings"),
+};
+
+export default api;
