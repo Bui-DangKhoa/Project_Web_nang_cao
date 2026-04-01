@@ -2,8 +2,9 @@
   "name": "velour-shop-server",
   "version": "1.0.0",
   "scripts": {
-    "start": "cd server && node index.js",
-    "install-server": "cd server && npm install"
+    "start": "npm --prefix velour-shop/server start",
+    "install-server": "npm --prefix velour-shop/server install",
+    "postinstall": "npm run install-server"
   },
   "dependencies": {
     "firebase": "^12.11.0"
