@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://velour-shop-server.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
