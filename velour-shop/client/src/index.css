@@ -235,5 +235,6 @@ body { font-family: var(--sans); background: var(--cream); color: var(--charcoal
 .footer { background: var(--charcoal); color: #666; text-align: center; padding: 24px; font-size: 13px; }
 .loading { display: flex; align-items: center; justify-content: center; min-height: 300px; font-size: 18px; color: var(--mid-gray); font-family: var(--serif); }
 .error-msg { color: var(--red); font-size: 13px; margin-bottom: 16px; }
+.success-msg { color: var(--green); font-size: 13px; margin-bottom: 16px; }
 .empty-state { text-align: center; padding: 80px; color: var(--mid-gray); }
 .empty-state-icon { font-size: 64px; margin-bottom: 16px; }

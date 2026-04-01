@@ -24,7 +24,7 @@ export default function HomePage() {
                     </p>
                     <div className="hero-btns">
                         <button className="btn-primary" onClick={() => navigate('/products')}>Khám Phá Ngay</button>
-                        <button className="btn-outline" onClick={() => navigate('/products')}>Xem Lookbook</button>
+                        <button className="btn-outline" onClick={() => navigate('/products?collection=Hot')}>Xem Lookbook</button>
                     </div>
                     <div className="hero-stats">
                         {[['10K+', 'Khách Hàng'], ['500+', 'Sản Phẩm'], ['4.9★', 'Đánh Giá']].map(([n, l]) => (
@@ -36,8 +36,23 @@ export default function HomePage() {
                     </div>
                 </div>
                 <div className="hero-right">
-                    <span className="hero-emoji">👗</span>
-                    <span className="hero-tag">NEW ARRIVAL</span>
+                    <div className="hero-gallery">
+                        <div
+                            className="hero-photo hero-photo-main"
+                            style={{
+                                backgroundImage:
+                                    "url('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80')",
+                            }}
+                        />
+                        <div
+                            className="hero-photo hero-photo-small"
+                            style={{
+                                backgroundImage:
+                                    "url('https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=80')",
+                            }}
+                        />
+                    </div>
+                    <span className="hero-tag">Crafted Wardrobe</span>
                 </div>
             </div>
 

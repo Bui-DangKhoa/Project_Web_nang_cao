@@ -2,11 +2,12 @@ const router = require('express').Router();
 const Product = require('../models/Product');
 const { protect } = require('../middleware/auth');
 
-// GET /api/products?category=Áo&page=1&limit=12&sort=price
+// GET /api/products?category=Áo&collection=Hot&page=1&limit=12&sort=price
 router.get('/', async (req, res) => {
-    const { category, sort, page = 1, limit = 12, search } = req.query;
+    const { category, collection, badge, sort, page = 1, limit = 12, search } = req.query;
     const query = {};
     if (category) query.category = category;
+    if (collection || badge) query.badge = collection || badge;
     if (search) query.name = { $regex: search, $options: 'i' };
 
     const sortObj = {
@@ -23,6 +24,19 @@ router.get('/', async (req, res) => {
         .limit(Number(limit));
 
     res.json({ products, total, pages: Math.ceil(total / limit), page: Number(page) });
+});
+
+// GET /api/products/meta
+router.get('/meta', async (_req, res) => {
+    const [categories, collections] = await Promise.all([
+        Product.distinct('category'),
+        Product.distinct('badge'),
+    ]);
+
+    res.json({
+        categories: categories.filter(Boolean),
+        collections: collections.filter(Boolean),
+    });
 });
 
 // GET /api/products/:id

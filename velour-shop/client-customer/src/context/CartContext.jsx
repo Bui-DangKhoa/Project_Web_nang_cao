@@ -5,13 +5,35 @@ import { useAuth } from "./AuthContext";
 const CartContext = createContext();
 
 const CART_STORAGE_KEY = "velour_guest_cart";
+const MAX_CART_STORAGE_SIZE = 300000;
+
+const normalizeCartItem = (item) => {
+  if (!item || !item._id) return null;
+  return {
+    _id: item._id,
+    name: item.name || "",
+    price: Number(item.price) || 0,
+    category: item.category || "",
+    images: Array.isArray(item.images) ? item.images.slice(0, 1) : [],
+    selectedSize: item.selectedSize || "",
+    selectedColor: item.selectedColor || "",
+    countInStock: Number(item.countInStock) || 0,
+    qty: Math.max(1, Number(item.qty) || 1),
+  };
+};
 
 const parseStoredCart = () => {
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return [];
+    if (raw.length > MAX_CART_STORAGE_SIZE) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      return [];
+    }
     const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data)
+      ? data.map(normalizeCartItem).filter(Boolean)
+      : [];
   } catch {
     return [];
   }
@@ -20,11 +42,14 @@ const parseStoredCart = () => {
 const cartReducer = (state, action) => {
   switch (action.type) {
     case "ADD_ITEM": {
+      const normalized = normalizeCartItem(action.payload);
+      if (!normalized) return state;
+
       const exists = state.find(
         (i) =>
-          i._id === action.payload._id &&
-          i.selectedSize === action.payload.selectedSize &&
-          i.selectedColor === action.payload.selectedColor,
+          i._id === normalized._id &&
+          i.selectedSize === normalized.selectedSize &&
+          i.selectedColor === normalized.selectedColor,
       );
       if (exists) {
         return state.map((i) =>
@@ -33,7 +58,7 @@ const cartReducer = (state, action) => {
             : i,
         );
       }
-      return [...state, { ...action.payload, qty: 1 }];
+      return [...state, normalized];
     }
     case "UPDATE_QTY":
       return state.map((i) =>
@@ -70,7 +95,14 @@ export const CartProvider = ({ children }) => {
   // Guest cart uses localStorage.
   useEffect(() => {
     if (user) return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    const normalizedCart = cart.map(normalizeCartItem).filter(Boolean);
+    const serialized = JSON.stringify(normalizedCart);
+    if (serialized.length > MAX_CART_STORAGE_SIZE) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      dispatch({ type: "SET_CART", payload: [] });
+      return;
+    }
+    localStorage.setItem(CART_STORAGE_KEY, serialized);
   }, [cart, user]);
 
   // Login: merge guest cart into server cart once.
@@ -84,13 +116,18 @@ export const CartProvider = ({ children }) => {
       const { data } = await userAPI.getCart();
       const dbCart = (data.cart || [])
         .map((item) => ({
-          ...(item.product || {}),
           _id: item.product?._id,
+          name: item.product?.name,
+          price: item.product?.price,
+          category: item.product?.category,
+          images: item.product?.images,
+          countInStock: item.product?.countInStock,
           qty: item.qty,
           selectedSize: item.selectedSize,
           selectedColor: item.selectedColor,
         }))
-        .filter((item) => item._id);
+        .map(normalizeCartItem)
+        .filter(Boolean);
 
       const mergedMap = new Map();
       [...dbCart, ...guestCart].forEach((item) => {
@@ -109,7 +146,7 @@ export const CartProvider = ({ children }) => {
         }
       });
 
-      const mergedCart = [...mergedMap.values()];
+      const mergedCart = [...mergedMap.values()].map(normalizeCartItem).filter(Boolean);
       if (!cancelled) {
         dispatch({ type: "SET_CART", payload: mergedCart });
       }

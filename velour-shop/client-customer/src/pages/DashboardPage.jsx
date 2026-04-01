@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { orderAPI, userAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,6 +22,7 @@ const EMPTY_ADDRESS = {
 export default function DashboardPage() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
@@ -39,6 +40,70 @@ export default function DashboardPage() {
             .catch(() => setOrders([]))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        const payment = searchParams.get('payment');
+        const orderId = searchParams.get('orderId');
+        const provider = payment?.startsWith('stripe')
+            ? 'stripe'
+            : payment?.startsWith('paypal')
+                ? 'paypal'
+                : payment?.startsWith('momo')
+                    ? 'momo'
+                    : payment?.startsWith('vnpay')
+                        ? 'vnpay'
+                    : null;
+
+        if (!payment || !orderId || !provider) return;
+
+        if (provider === 'vnpay') {
+            if (payment.endsWith('success')) {
+                setMessage(`Thanh toán VNPay thành công cho đơn #${orderId.slice(-8).toUpperCase()}`);
+            } else if (payment.endsWith('pending')) {
+                setMessage(`Đơn #${orderId.slice(-8).toUpperCase()} đang chờ xác nhận từ VNPay`);
+            } else if (payment.endsWith('cancel')) {
+                setMessage('Bạn đã hủy thanh toán VNPay');
+            } else {
+                setMessage('Thanh toán VNPay chưa hoàn tất');
+            }
+
+            orderAPI.myOrders()
+                .then(({ data }) => setOrders(data))
+                .catch(() => {} )
+                .finally(() => {
+                    setSearchParams({}, { replace: true });
+                });
+            return;
+        }
+
+        if (payment.endsWith('success') || payment.endsWith('pending')) {
+            orderAPI.confirmDemoPayment(orderId, {
+                provider,
+                transactionNo: `${provider.toUpperCase()}-${Date.now()}`,
+            })
+                .then(({ data }) => {
+                    setOrders((prev) => {
+                        const next = prev.map((o) => (o._id === orderId ? data.order : o));
+                        if (!next.find((o) => o._id === orderId)) {
+                            next.unshift(data.order);
+                        }
+                        return next;
+                    });
+                    setMessage(`Thanh toán ${provider.toUpperCase()} demo thành công cho đơn #${orderId.slice(-8).toUpperCase()}`);
+                })
+                .catch((err) => {
+                    setMessage(err.response?.data?.message || 'Không thể xác nhận thanh toán demo');
+                })
+                .finally(() => {
+                    setSearchParams({}, { replace: true });
+                });
+        }
+
+        if (payment.endsWith('cancel')) {
+            setMessage(`Bạn đã hủy thanh toán ${provider.toUpperCase()} demo`);
+            setSearchParams({}, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     // Lấy thông tin profile: wishlist + addresses
     useEffect(() => {

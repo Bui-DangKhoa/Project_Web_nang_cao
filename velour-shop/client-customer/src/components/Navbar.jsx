@@ -24,7 +24,7 @@ export default function Navbar() {
         <Link to="/products" className="nav-link">
           Sản Phẩm
         </Link>
-        <Link to="/products" className="nav-link">
+        <Link to="/products?collection=Hot" className="nav-link">
           Bộ Sưu Tập
         </Link>
       </div>

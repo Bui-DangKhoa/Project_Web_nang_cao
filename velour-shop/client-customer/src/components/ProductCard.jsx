@@ -1,14 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 
+const asCategoryLabel = (category) => {
+    if (!category) return '';
+    if (typeof category === 'string') return category;
+    if (typeof category === 'object') return category.name || '';
+    return String(category);
+};
+
 export default function ProductCard({ product }) {
     const navigate = useNavigate();
     const fmt = (n) => n?.toLocaleString('vi-VN') + 'đ';
+    const categoryLabel = asCategoryLabel(product.category);
 
     const EMOJIS = {
         'Áo': '👕', 'Quần': '👖', 'Giày': '👟', 'Phụ kiện': '👜',
         'Đồng hồ': '⌚', 'Kính': '🕶️',
     };
-    const emoji = EMOJIS[product.category] || '🛍️';
+    const emoji = EMOJIS[categoryLabel] || '🛍️';
 
     return (
         <div className="product-card" onClick={() => navigate(`/products/${product._id}`)}>
@@ -27,7 +35,7 @@ export default function ProductCard({ product }) {
                 </div>
             </div>
             <div className="product-info">
-                <div className="product-cat">{product.category}</div>
+                <div className="product-cat">{categoryLabel}</div>
                 <div className="product-name">{product.name}</div>
                 <div className="product-footer">
                     <div>

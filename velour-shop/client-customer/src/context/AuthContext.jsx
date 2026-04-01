@@ -19,9 +19,14 @@ export const AuthProvider = ({ children }) => {
     return persistUser(data);
   };
 
-  const register = async (name, email, password) => {
-    const { data } = await authAPI.register({ name, email, password });
-    return persistUser(data);
+  const register = async (name, email, password, phone) => {
+    const { data } = await authAPI.register({ name, email, password, phone });
+    return data;
+  };
+
+  const activate = async (id, token) => {
+    const { data } = await authAPI.activate({ id, token });
+    return data;
   };
 
   const socialLogin = async (provider, payload) => {
@@ -87,6 +92,7 @@ export const AuthProvider = ({ children }) => {
         user,
         login,
         register,
+        activate,
         socialLogin,
         googleTokenLogin,
         facebookTokenLogin,

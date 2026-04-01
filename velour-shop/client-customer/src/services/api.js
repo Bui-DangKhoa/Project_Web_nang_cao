@@ -12,6 +12,7 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
   login: (data) => api.post("/auth/login", data),
   register: (data) => api.post("/auth/register", data),
+  activate: (data) => api.post("/auth/activate", data),
   logout: () => api.post("/auth/logout"),
   refresh: (data) => api.post("/auth/refresh", data),
   forgotPassword: (data) => api.post("/auth/forgot-password", data),
@@ -31,6 +32,7 @@ export const authAPI = {
 
 export const productAPI = {
   getAll: (params) => api.get("/products", { params }),
+  meta: () => api.get("/products/meta"),
   suggest: (q) => api.get("/products/search/suggest", { params: { q } }),
   getById: (id) => api.get(`/products/${id}`),
   getRelated: (id) => api.get(`/products/${id}/related`),
@@ -44,7 +46,10 @@ export const orderAPI = {
   create: (data) => api.post("/orders", data),
   myOrders: () => api.get("/orders/myorders"),
   getById: (id) => api.get(`/orders/${id}`),
+  confirmDemoPayment: (id, data) =>
+    api.post(`/orders/${id}/payment/demo-confirm`, data),
   createMomoPayment: (data) => api.post("/orders/payment/momo/create", data),
+  createVnpayPayment: (data) => api.post("/orders/payment/vnpay/create", data),
   createStripeCheckoutSession: (data) =>
     api.post("/orders/payment/stripe/checkout-session", data),
   createPaypalOrder: (data) =>

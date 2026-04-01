@@ -13,30 +13,65 @@ export default function LoginPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirm: "",
+    activationId: "",
+    activationToken: "",
   });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, register, firebaseSocialLogin } = useAuth();
+  const { login, register, activate, firebaseSocialLogin } = useAuth();
   const navigate = useNavigate();
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const submit = async () => {
     setError("");
+    setSuccess("");
+    
     if (tab === "signup" && form.password !== form.confirm) {
       return setError("Mật khẩu không khớp");
     }
-    if (!form.email || !form.password) {
+    if (tab === "signup" && !form.name) {
+      return setError("Vui lòng điền họ tên");
+    }
+    if (tab === "signup" && !form.phone.trim()) {
+      return setError("Vui lòng điền số điện thoại");
+    }
+    if ((tab === "signup" || tab === "login") && (!form.email || !form.password)) {
       return setError("Vui lòng điền đầy đủ thông tin");
+    }
+    if (tab === "login" && !form.email.includes("@")) {
+      return setError("Tài khoản mới đăng ký vui lòng đăng nhập bằng email đã dùng khi đăng ký");
+    }
+    if (tab === "active" && (!form.activationId || !form.activationToken)) {
+      return setError("Vui lòng điền đầy đủ ID và Token");
     }
 
     try {
       setLoading(true);
-      if (tab === "login") await login(form.email, form.password);
-      else await register(form.name, form.email, form.password);
-      navigate("/dashboard");
+      if (tab === "login") {
+        await login(form.email, form.password);
+        navigate("/dashboard");
+      } else if (tab === "signup") {
+        const data = await register(
+          form.name,
+          form.email,
+          form.password,
+          form.phone,
+        );
+        setSuccess(
+          data.message ||
+            "Đăng ký thành công. Vui lòng kiểm tra email để lấy ID/Token và kích hoạt tài khoản.",
+        );
+        setTab("active");
+      } else {
+        const data = await activate(form.activationId.trim(), form.activationToken.trim());
+        setSuccess(data.message || "Kích hoạt thành công. Vui lòng đăng nhập.");
+        setTab("login");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Có lỗi xảy ra");
     } finally {
@@ -88,6 +123,7 @@ export default function LoginPage() {
           {[
             ["login", "Đăng Nhập"],
             ["signup", "Đăng Ký"],
+            ["active", "Kích Hoạt"],
           ].map(([t, l]) => (
             <div
               key={t}
@@ -95,6 +131,7 @@ export default function LoginPage() {
               onClick={() => {
                 setTab(t);
                 setError("");
+                setSuccess("");
               }}
             >
               {l}
@@ -116,31 +153,76 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input
-            className="form-input"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handle}
-            onKeyDown={handleKeyDown}
-            placeholder="email@example.com"
-          />
-        </div>
+        {tab === "signup" && (
+          <div className="form-group">
+            <label className="form-label">Số Điện Thoại</label>
+            <input
+              className="form-input"
+              name="phone"
+              value={form.phone}
+              onChange={handle}
+              onKeyDown={handleKeyDown}
+              placeholder="0912 345 678"
+            />
+          </div>
+        )}
 
-        <div className="form-group">
-          <label className="form-label">Mật Khẩu</label>
-          <input
-            className="form-input"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handle}
-            onKeyDown={handleKeyDown}
-            placeholder="••••••••"
-          />
-        </div>
+        {tab === "active" && (
+          <>
+            <div className="form-group">
+              <label className="form-label">ID Tài Khoản</label>
+              <input
+                className="form-input"
+                name="activationId"
+                value={form.activationId}
+                onChange={handle}
+                onKeyDown={handleKeyDown}
+                placeholder="ID từ email"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Token Kích Hoạt</label>
+              <input
+                className="form-input"
+                name="activationToken"
+                value={form.activationToken}
+                onChange={handle}
+                onKeyDown={handleKeyDown}
+                placeholder="Token từ email"
+              />
+            </div>
+          </>
+        )}
+
+        {tab !== "active" && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input
+                className="form-input"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handle}
+                onKeyDown={handleKeyDown}
+                placeholder="email@example.com"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Mật Khẩu</label>
+              <input
+                className="form-input"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handle}
+                onKeyDown={handleKeyDown}
+                placeholder="••••••••"
+              />
+            </div>
+          </>
+        )}
 
         {tab === "signup" && (
           <div className="form-group">
@@ -160,6 +242,7 @@ export default function LoginPage() {
         {tab === "login" && <span className="forgot-link">Quên mật khẩu?</span>}
 
         {error && <p className="error-msg">{error}</p>}
+        {success && <p className="success-msg">{success}</p>}
 
         <button
           className="btn-primary"
@@ -171,7 +254,9 @@ export default function LoginPage() {
             ? "Đang xử lý..."
             : tab === "login"
               ? "Đăng Nhập"
-              : "Tạo Tài Khoản"}
+              : tab === "signup"
+              ? "Tạo Tài Khoản"
+              : "Kích Hoạt"}
         </button>
 
         {tab === "login" && (

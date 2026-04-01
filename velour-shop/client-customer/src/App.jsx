@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
@@ -12,127 +11,49 @@ import CheckoutPage from "./pages/CheckoutPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFoundPage from "./pages/NotFoundPage";
-import { seoAPI } from "./services/api";
 
-function upsertMeta(name, content, attr = "name") {
-  if (!content) return;
-  const selector = `meta[${attr}="${name}"]`;
-  let tag = document.head.querySelector(selector);
-  if (!tag) {
-    tag = document.createElement("meta");
-    tag.setAttribute(attr, name);
-    document.head.appendChild(tag);
-  }
-  tag.setAttribute("content", content);
-}
-
-function applyCanonical(url) {
-  if (!url) return;
-  let link = document.head.querySelector('link[rel="canonical"]');
-  if (!link) {
-    link = document.createElement("link");
-    link.setAttribute("rel", "canonical");
-    document.head.appendChild(link);
-  }
-  link.setAttribute("href", url);
-}
-
-function SeoRuntime() {
-  const [seoSettings, setSeoSettings] = useState(null);
+function AppShell() {
   const location = useLocation();
+  const hideNav = location.pathname === "/login";
 
-  useEffect(() => {
-    seoAPI
-      .getSettings()
-      .then(({ data }) => setSeoSettings(data))
-      .catch(() => setSeoSettings(null));
-  }, []);
-
-  useEffect(() => {
-    if (!seoSettings) return;
-
-    const pathname = location.pathname;
-    const pageTitle =
-      pathname === "/"
-        ? seoSettings.homepageTitle || seoSettings.siteTitle
-        : pathname.startsWith("/products")
-          ? seoSettings.productsTitle || seoSettings.siteTitle
-          : seoSettings.siteTitle;
-
-    document.title = pageTitle || "VELOUR Shop";
-
-    upsertMeta("description", seoSettings.metaDescription);
-    upsertMeta("keywords", seoSettings.metaKeywords);
-
-    const robots = seoSettings.noindex
-      ? "noindex,nofollow"
-      : seoSettings.robots;
-    upsertMeta("robots", robots || "index,follow");
-
-    upsertMeta("og:title", seoSettings.ogTitle || pageTitle, "property");
-    upsertMeta(
-      "og:description",
-      seoSettings.ogDescription || seoSettings.metaDescription,
-      "property",
-    );
-    upsertMeta("og:image", seoSettings.ogImage || "", "property");
-    upsertMeta("og:type", "website", "property");
-
-    upsertMeta(
-      "twitter:card",
-      seoSettings.twitterCard || "summary_large_image",
-    );
-    upsertMeta("twitter:site", seoSettings.twitterSite || "");
-    upsertMeta("twitter:title", seoSettings.ogTitle || pageTitle);
-    upsertMeta(
-      "twitter:description",
-      seoSettings.ogDescription || seoSettings.metaDescription,
-    );
-    upsertMeta("twitter:image", seoSettings.ogImage || "");
-
-    const canonicalBase = (seoSettings.canonicalBaseUrl || "").replace(
-      /\/$/,
-      "",
-    );
-    applyCanonical(
-      canonicalBase ? `${canonicalBase}${pathname}` : window.location.href,
-    );
-  }, [location.pathname, seoSettings]);
-
-  return null;
+  return (
+    <>
+      {!hideNav && <Navbar />}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
+  );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <SeoRuntime />
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <CartProvider>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/products/:id" element={<ProductDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <AppShell />
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -12,6 +12,7 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
     login: (data) => api.post('/auth/login', data),
     register: (data) => api.post('/auth/register', data),
+    activate: (data) => api.post('/auth/activate', data),
 };
 
 export const productAPI = {

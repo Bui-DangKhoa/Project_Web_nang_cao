@@ -29,6 +29,7 @@ export const productAPI = {
   create: (data) => api.post("/products", data),
   update: (id, data) => api.put(`/products/${id}`, data),
   remove: (id) => api.delete(`/products/${id}`),
+  getMeta: () => api.get("/products/meta"),
 };
 
 export const orderAPI = {

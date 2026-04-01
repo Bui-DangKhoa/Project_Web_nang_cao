@@ -20,8 +20,8 @@ const firebaseConfig = {
     import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1042444670734",
   appId:
     import.meta.env.VITE_FIREBASE_APP_ID ||
-    "1:1042444670734:web:92fc78bb88f43b73a7a95f",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-9L4D48L3X0",
+    "1:1042444670734:web:64047db5dede7648a7a95f",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-531MKJ46Y7",
 };
 
 const app = initializeApp(firebaseConfig);

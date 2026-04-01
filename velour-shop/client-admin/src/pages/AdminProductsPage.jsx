@@ -16,6 +16,7 @@ const EMPTY_PRODUCT = {
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -29,6 +30,12 @@ export default function AdminProductsPage() {
             .getAll({ page: 1, limit: 1000 })
             .then(({ data }) => {
                 setProducts(data.products || []);
+                // Fetch categories separately
+                productAPI.getMeta().then(({ data }) => {
+                    if (data.categories && data.categories.length > 0) {
+                        setCategories(data.categories);
+                    }
+                }).catch((err) => console.error('Failed to load categories:', err));
             })
             .catch(() => setProducts([]))
             .finally(() => setLoading(false));
@@ -168,12 +175,19 @@ export default function AdminProductsPage() {
                         </div>
                         <div className="form-group">
                             <label>Danh mục</label>
-                            <input
+                            <select
                                 name="category"
                                 value={form.category}
                                 onChange={handleChange}
                                 required
-                            />
+                            >
+                                <option value="">-- Chọn danh mục --</option>
+                                {categories.map((cat) => (
+                                    <option key={cat} value={cat}>
+                                        {cat}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

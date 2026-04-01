@@ -27,6 +27,13 @@ function upsertCanonical(url) {
   link.setAttribute("href", url);
 }
 
+function asCategoryLabel(category) {
+  if (!category) return "";
+  if (typeof category === "string") return category;
+  if (typeof category === "object") return category.name || "";
+  return String(category);
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -38,6 +45,7 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const categoryLabel = asCategoryLabel(product?.category);
 
   useEffect(() => {
     productAPI.getById(id).then(({ data }) => setProduct(data));
@@ -55,7 +63,7 @@ export default function ProductDetailPage() {
     const productImage = product.images?.[0] || "";
     const keywords = [
       product.name,
-      product.category,
+      categoryLabel,
       product.subcategory,
       product.brand,
       ...(product.sizes || []),
@@ -154,7 +162,7 @@ export default function ProductDetailPage() {
       : 0;
 
   const EMOJIS = { Áo: "👕", Quần: "👖", Giày: "👟", "Phụ kiện": "👜" };
-  const emoji = EMOJIS[product.category] || "🛍️";
+  const emoji = EMOJIS[categoryLabel] || "🛍️";
 
   return (
     <div>
@@ -222,7 +230,7 @@ export default function ProductDetailPage() {
 
         {/* Thông tin */}
         <div>
-          <div className="detail-category">{product.category}</div>
+          <div className="detail-category">{categoryLabel}</div>
           <h1 className="detail-title">{product.name}</h1>
           <div className="detail-rating">
             <span className="detail-stars">

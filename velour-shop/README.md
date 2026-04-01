@@ -28,6 +28,16 @@ File `server/.env` đã được tạo sẵn với:
 MONGO_URI=mongodb://localhost:27017/velour-shop
 JWT_SECRET=velour_secret_key_2026
 PORT=5000
+PUBLIC_APP_URL=http://localhost:5173
+
+# VNPay (production/sandbox)
+VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNPAY_TMN_CODE=YOUR_TMN_CODE
+VNPAY_HASH_SECRET=YOUR_HASH_SECRET
+VNPAY_RETURN_URL=http://localhost:5000/api/orders/payment/vnpay/return
+VNPAY_IPN_URL=http://localhost:5000/api/orders/payment/vnpay/ipn
+VNPAY_IPN_ALLOWLIST=127.0.0.1,::1
+VNPAY_LOCK_TIMEOUT_MS=120000
 ```
 
 > **Yêu cầu**: MongoDB phải đang chạy trên máy (cổng 27017).  

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { orderAPI, couponAPI } from "../services/api";
+import { orderAPI, couponAPI, userAPI } from "../services/api";
 
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
@@ -21,6 +21,7 @@ export default function CheckoutPage() {
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [toast, setToast] = useState(null);
   const [paymentResult, setPaymentResult] = useState(null);
+  const [qrPayment, setQrPayment] = useState(null);
 
   const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
 
@@ -31,6 +32,37 @@ export default function CheckoutPage() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateShippingAddress = async () => {
+      try {
+        const { data } = await userAPI.getProfile();
+        const addresses = Array.isArray(data.addresses) ? data.addresses : [];
+        const preferredAddress =
+          addresses.find((addr) => addr.isDefault) || addresses[0];
+
+        if (!mounted || !preferredAddress) return;
+
+        setForm((prev) => ({
+          ...prev,
+          name: preferredAddress.name || data.name || prev.name,
+          street: preferredAddress.street || prev.street,
+          city: preferredAddress.city || prev.city,
+          district: preferredAddress.district || prev.district,
+          phone: preferredAddress.phone || data.phone || prev.phone,
+        }));
+      } catch {
+        // Keep manual input flow when profile data cannot be loaded.
+      }
+    };
+
+    hydrateShippingAddress();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -85,7 +117,7 @@ export default function CheckoutPage() {
         paymentResult: result || undefined,
       });
 
-      const isOnlinePayment = ["momo", "card", "paypal"].includes(
+      const isOnlinePayment = ["momo", "vnpay", "card", "paypal"].includes(
         paymentMethod,
       );
 
@@ -113,19 +145,29 @@ export default function CheckoutPage() {
           throw new Error("Không lấy được đường dẫn thanh toán MoMo");
         }
 
-        window.open(momo.data.payUrl, "_blank", "noopener,noreferrer");
+        clearCart();
+        navigate(`/dashboard?payment=momo_pending&orderId=${order?.data?._id}`);
+        return;
+      }
 
-        paidResult = {
-          id: momo.data.orderId,
-          provider: "momo",
-          method: "momo",
-          status: "pending",
-          amount: momo.data.amount,
-          transactionNo: momo.data.requestId,
-          payUrl: momo.data.payUrl,
-          update_time: new Date().toISOString(),
-        };
-        setPaymentResult(paidResult);
+      if (paymentMethod === "vnpay" && !paidResult) {
+        const vnpay = await orderAPI.createVnpayPayment({
+          amount: finalTotal,
+          orderInfo: `Thanh toán đơn hàng VELOUR - ${form.name}`,
+          orderId: order?.data?._id,
+        });
+
+        if (!vnpay.data.qrUrl) {
+          throw new Error("Không tạo được mã QR VNPay");
+        }
+
+        setQrPayment({
+          qrUrl: vnpay.data.qrUrl,
+          orderId: order?.data?._id,
+          amount: finalTotal,
+          payUrl: vnpay.data.payUrl,
+        });
+        return;
       }
 
       if (paymentMethod === "card" && !paidResult) {
@@ -140,19 +182,9 @@ export default function CheckoutPage() {
           throw new Error("Không tạo được Stripe checkout session");
         }
 
-        window.open(stripeSession.data.url, "_blank", "noopener,noreferrer");
-
-        paidResult = {
-          id: stripeSession.data.sessionId,
-          provider: "stripe",
-          method: "card",
-          status: "pending",
-          amount: finalTotal,
-          transactionNo: stripeSession.data.sessionId,
-          payUrl: stripeSession.data.url,
-          update_time: new Date().toISOString(),
-        };
-        setPaymentResult(paidResult);
+        clearCart();
+        navigate(`/dashboard?payment=stripe_pending&orderId=${order?.data?._id}`);
+        return;
       }
 
       if (paymentMethod === "paypal" && !paidResult) {
@@ -162,24 +194,9 @@ export default function CheckoutPage() {
           orderId: order?.data?._id,
         });
 
-        const approveLink = (paypalOrder.data.links || []).find(
-          (item) => item.rel === "approve",
-        )?.href;
-        if (approveLink) {
-          window.open(approveLink, "_blank", "noopener,noreferrer");
-        }
-        paidResult = {
-          id: paypalOrder.data.orderId,
-          provider: "paypal",
-          method: "paypal",
-          status: "pending",
-          amount: finalTotal,
-          currency: "VND",
-          transactionNo: paypalOrder.data.orderId,
-          payUrl: approveLink,
-          update_time: new Date().toISOString(),
-        };
-        setPaymentResult(paidResult);
+        clearCart();
+        navigate(`/dashboard?payment=paypal_pending&orderId=${order?.data?._id}`);
+        return;
       }
 
       if (!isOnlinePayment) {
@@ -270,6 +287,7 @@ export default function CheckoutPage() {
                 ["cod", "💵", "Thanh toán khi nhận hàng"],
                 ["bank", "🏦", "Chuyển khoản ngân hàng"],
                 ["momo", "💜", "Ví MoMo"],
+                ["vnpay", "🟦", "VNPay QR"],
                 ["card", "💳", "Thẻ tín dụng/ghi nợ (Stripe Checkout)"],
                 ["paypal", "🟦", "PayPal"],
               ].map(([val, em, label]) => (
@@ -312,6 +330,22 @@ export default function CheckoutPage() {
                   Bạn sẽ được chuyển đến Stripe Checkout để nhập thông tin thẻ
                   an toàn theo chuẩn PCI DSS.
                 </div>
+              </div>
+            )}
+
+            {paymentMethod === "vnpay" && (
+              <div
+                style={{
+                  marginTop: 12,
+                  background: "rgba(0, 102, 204, 0.06)",
+                  border: "1px solid rgba(0, 102, 204, 0.2)",
+                  borderRadius: 12,
+                  padding: 12,
+                  fontSize: 13,
+                }}
+              >
+                Khi bấm xác nhận đặt hàng, hệ thống sẽ tạo mã QR VNPay để bạn
+                quét thanh toán trực tiếp.
               </div>
             )}
 
@@ -459,6 +493,73 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {qrPayment && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 200,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              width: "min(92vw, 420px)",
+              background: "#fff",
+              borderRadius: 16,
+              padding: 20,
+              textAlign: "center",
+              boxShadow: "0 12px 40px rgba(0, 0, 0, 0.18)",
+            }}
+          >
+            <h3 style={{ margin: 0 }}>Quét mã VNPay để thanh toán</h3>
+            <p style={{ margin: "10px 0 14px", color: "var(--mid-gray)" }}>
+              Đơn hàng #{qrPayment.orderId?.slice(-8)?.toUpperCase()} • {fmt(qrPayment.amount)}
+            </p>
+            <img
+              src={qrPayment.qrUrl}
+              alt="VNPay QR"
+              style={{ width: 280, maxWidth: "100%", borderRadius: 12 }}
+            />
+            <div
+              style={{
+                marginTop: 14,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (qrPayment.payUrl) {
+                    window.open(qrPayment.payUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                Mở trang VNPay
+              </button>
+              <button
+                className="btn-primary"
+                style={{ background: "#eef2f7", color: "#1f2937" }}
+                onClick={() => {
+                  setQrPayment(null);
+                  clearCart();
+                  navigate(
+                    `/dashboard?payment=vnpay_pending&orderId=${qrPayment.orderId}`,
+                  );
+                }}
+              >
+                Tôi sẽ thanh toán sau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
