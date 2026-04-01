@@ -22,6 +22,13 @@ app.get('/health', (_req, res) => {
 	res.status(200).json({ status: 'ok' });
 });
 
+app.get('/api', (_req, res) => {
+	res.status(200).json({
+		message: 'VELOUR Shop API is running',
+		endpoints: ['auth', 'admin', 'customer', 'products', 'orders', 'coupons', 'users'],
+	});
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./api/admin'));
