@@ -1,6 +1,15 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const defaultApiBaseUrl = import.meta.env.DEV
+    ? '/api'
+    : 'https://velour-shop-server.onrender.com/api';
+
+const configuredApiBaseUrl =
+    import.meta.env.VITE_API_URL || defaultApiBaseUrl;
+
+const api = axios.create({
+    baseURL: configuredApiBaseUrl.replace(/\/$/, ''),
+});
 
 // Tự động gắn token
 api.interceptors.request.use((config) => {
